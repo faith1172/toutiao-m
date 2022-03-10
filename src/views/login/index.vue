@@ -31,7 +31,7 @@
             <!-- 倒计时 -->
             <van-count-down v-if="isCountDownShow"
                             class="time"
-                            :time="1000 * 10"
+                            :time="1000 * 60"
                             format="ss s"
                             @finish="isCountDownShow = false" />
             <van-button v-else
@@ -58,7 +58,7 @@
 </template>
 
 <script>
-import { login } from '@/api/user'
+import { login, sendSms } from '@/api/user'
 export default {
   name: 'LoginIndex',
   data () {
@@ -101,8 +101,8 @@ export default {
 
       // 3. 提交表单请求登录
       try {
-        const res = await login(user)
-        console.log('登录成功', res)
+        const { data } = await login(user)
+        this.$store.commit('setUser', data.data)
         this.$toast.success('登录成功')
       } catch (error) {
         if (error.response.status === 400) {
@@ -125,6 +125,20 @@ export default {
       }
       // 2. 验证通过,显示倒计时
       this.isCountDownShow = true
+
+      // 3. 请求发送验证码
+      try {
+        await sendSms(this.user.mobile)
+        this.$toast('发送成功')
+      } catch (error) {
+        // 发送失败，关闭倒计时
+        this.isCountDownShow = false
+        if (error.response.status === 429) {
+          this.$toast('发送太频繁了，请稍后再试')
+        } else {
+          this.$toast('发送失败')
+        }
+      }
     }
   }
 }
